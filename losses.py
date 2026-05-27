@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import math
 from typing import Dict, Optional, Sequence
 
@@ -91,18 +89,6 @@ def wing_switch_loss(pred_x: torch.Tensor, true_x: torch.Tensor) -> torch.Tensor
     return (diff ** 2).mean()
 
 
-def spectral_loss_xyz(pred: torch.Tensor, true: torch.Tensor) -> torch.Tensor:
-    return spectral_loss(pred, true)
-
-
-def amplitude_loss_xyz(pred: torch.Tensor, true: torch.Tensor) -> torch.Tensor:
-    return amplitude_loss(pred, true)
-
-
-def mean_z_loss_local(pred_long: torch.Tensor, true_long: torch.Tensor) -> torch.Tensor:
-    return mean_z_loss_from_long(pred_long, true_long)
-
-
 def mdn_nll_mean(pi: torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     target_exp = target.unsqueeze(1).expand_as(mu)
 
@@ -112,10 +98,6 @@ def mdn_nll_mean(pi: torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor, target
 
     log_mix = torch.logsumexp(log_prob + torch.log(pi + 1e-8), dim=-1)
     return -log_mix.mean()
-
-
-def mdn_nll_loss(pi: torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    return mdn_nll_mean(pi, mu, sigma, target)
 
 
 def mdn_nll_sequence(pi: torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor, true: torch.Tensor, max_steps: Optional[int] = None) -> torch.Tensor:
@@ -157,8 +139,6 @@ def soft_cdf_loss_1d(pred_x: torch.Tensor, true_x: torch.Tensor, grid: Optional[
                 q = torch.linspace(0.02, 0.98, 21, device=pred_x.device)
                 grid = torch.quantile(true_x.detach().reshape(-1), q)
                 grid = torch.unique(grid)
-        else:
-            raise ValueError(f"Unknown CDF mode: {mode!r}")
 
     total = torch.tensor(0.0, device=pred_x.device)
 
@@ -167,7 +147,7 @@ def soft_cdf_loss_1d(pred_x: torch.Tensor, true_x: torch.Tensor, grid: Optional[
         ft = torch.sigmoid(temp * (tau - true_x.detach())).mean(dim=1)
         total = total + ((fp - ft) ** 2).mean()
 
-    return total / max(len(grid), 1)
+    return total/max(len(grid), 1)
 
 
 def soft_bin_probs_1d(x: torch.Tensor, edges: Sequence[float], temp: float = 10.0) -> torch.Tensor:
@@ -199,8 +179,6 @@ def x_bin_occupancy_loss(pred_x: torch.Tensor, true_x: torch.Tensor, edges: Opti
                 q = torch.tensor([0.05, 0.20, 0.40, 0.60, 0.80, 0.95], device=pred_x.device)
                 edges_t = torch.quantile(true_x.detach().reshape(-1), q)
                 edges = tuple(edges_t.detach().cpu().tolist())
-        else:
-            raise ValueError(f"Unknown CDF mode: {mode!r}")
 
     p = soft_bin_probs_1d(pred_x, edges, temp=temp)
     t = soft_bin_probs_1d(true_x.detach(), edges, temp=temp)
@@ -236,10 +214,6 @@ def gate_aux_loss_x_from_pred(pred: torch.Tensor, gate: torch.Tensor, err_hat: t
     return lambda_gate * l_gate + lambda_err * l_err + lambda_cov * cov_penalty
 
 
-def _require_loss_cfg(loss_cfg):
-    if loss_cfg is None:
-        raise ValueError("loss_cfg must be provided, e.g. loss_cfg=cfg.loss")
-
 
 def _stat_ramp_weight(epoch: int, loss_cfg) -> float:
     ramp_denom = max(loss_cfg.stat_ramp_epochs, 1)
@@ -257,11 +231,9 @@ def _forecast_loss(pred_tf: torch.Tensor, pi_tf: torch.Tensor, mu_tf: torch.Tens
     l_vel = velocity_loss(pred_tf[:, :short_k], true[:, :short_k])
     forecast = loss_cfg.mdn_nll_weight * l_nll_short + 1.00 * l_mse_short + 0.50 * l_vel
 
-    parts = {
-        "nll_short": l_nll_short,
+    parts = {"nll_short": l_nll_short,
         "mse_short": l_mse_short,
-        "vel": l_vel
-    }
+        "vel": l_vel}
 
     return forecast, parts
 
@@ -283,7 +255,7 @@ def _gate_aux_rollout_loss(pred_fr: torch.Tensor, gate_fr: torch.Tensor, err_hat
             lambda_gate=1.0, lambda_err=0.1,
             eps_x=eps_t,temp_err=0.15)
 
-    return l_gate_aux / max(H, 1)
+    return l_gate_aux/max(H, 1)
 
 
 def _selective_debug_dict(forecast_loss: torch.Tensor, forecast_parts: Dict[str, torch.Tensor], gate_loss: torch.Tensor, stat_loss: torch.Tensor, gate_tf: torch.Tensor, gate_fr: torch.Tensor) -> Dict[str, float]:
@@ -310,7 +282,6 @@ def _mdnstats_debug_dict(loss: torch.Tensor, forecast_loss: torch.Tensor, stat_l
 
 
 def combined_selective_loss_xonly(pred_tf: torch.Tensor, gate_tf: torch.Tensor, err_hat_tf: torch.Tensor, pi_tf: torch.Tensor, mu_tf: torch.Tensor, sigma_tf: torch.Tensor, pred_fr: torch.Tensor, gate_fr: torch.Tensor, err_hat_fr: torch.Tensor, pi_fr: torch.Tensor, mu_fr: torch.Tensor, sigma_fr: torch.Tensor, true: torch.Tensor, short_k: int, epoch: int, n_epochs: int, coverage_target: float, lambda_cov: float, eps_x: float = 0.7, use_adaptive_oracle: bool = False, eps_short: float = 0.6, eps_long: float = 1.2, *, loss_cfg=None) -> tuple[torch.Tensor, Dict[str, float]]:
-    _require_loss_cfg(loss_cfg)
 
     H = true.size(1)
     short_k = min(short_k, H)
@@ -367,7 +338,6 @@ def combined_selective_loss_xonly(pred_tf: torch.Tensor, gate_tf: torch.Tensor, 
 
 
 def combined_selective_loss(pred_tf: torch.Tensor, gate_tf: torch.Tensor, err_hat_tf: torch.Tensor, pi_tf: torch.Tensor, mu_tf: torch.Tensor, sigma_tf: torch.Tensor, pred_fr: torch.Tensor, gate_fr: torch.Tensor, err_hat_fr: torch.Tensor, pi_fr: torch.Tensor, mu_fr: torch.Tensor, sigma_fr: torch.Tensor, true: torch.Tensor, short_k: int, epoch: int, n_epochs: int, coverage_target: float, lambda_cov: float, eps_x: float = 0.7, use_adaptive_oracle: bool = False, eps_short: float = 0.6, eps_long: float = 1.2, *, loss_cfg=None) -> tuple[torch.Tensor, Dict[str, float]]:
-    _require_loss_cfg(loss_cfg)
 
     H = true.size(1)
     short_k = min(short_k, H)
@@ -429,7 +399,6 @@ def combined_selective_loss(pred_tf: torch.Tensor, gate_tf: torch.Tensor, err_ha
 
 
 def combined_mdnstats_loss(pred: torch.Tensor, true: torch.Tensor, pi: torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor, short_k: int, epoch: int, n_epochs: int, *, loss_cfg=None) -> tuple[torch.Tensor, Dict[str, float]]:
-    _require_loss_cfg(loss_cfg)
 
     H = true.size(1)
     D = true.size(-1)
