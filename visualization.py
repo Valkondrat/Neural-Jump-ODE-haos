@@ -1,21 +1,13 @@
-from __future__ import annotations
-
 import matplotlib.pyplot as plt
 import numpy as np
 
 from detectors import _adaptive_oracle_good_x_np, _score_to_predictable_mask
-from utils import _get_x_np, _normalize_threshold, _squeeze_step_mask_np, _to_numpy
+from utils import _get_x_np, _normalize_threshold, _squeeze_step_mask_np, _to_numpy, rmse_by_step
 
 
 """
 Файл для визуализаций  
 """
-
-
-def _rmse_x_by_step(pred, true):
-    pred_x = _get_x_np(pred)
-    true_x = _get_x_np(true)
-    return np.sqrt(((pred_x - true_x) ** 2).mean(axis=0))
 
 
 def _rmse_x_by_step_partial(pred, true, mask):
@@ -152,8 +144,8 @@ def plot_prediction_example(pred, true, cfg, *, idx=0, score=None, gate=None, pr
     ax.grid(alpha=0.3)
     ax.legend(fontsize=9)
 
-    raw_rmse = _rmse_x_by_step(pred, true)
-    corr_rmse = None if corrected_pred is None else _rmse_x_by_step(corrected_pred, true)
+    raw_rmse = rmse_by_step(pred, true)
+    corr_rmse = None if corrected_pred is None else rmse_by_step(corrected_pred, true)
     partial_rmse = None
     oracle_rmse = None
     coverage_by_step = None
@@ -201,8 +193,7 @@ def plot_prediction_example(pred, true, cfg, *, idx=0, score=None, gate=None, pr
     fig.tight_layout()
     plt.show()
 
-    return {
-        "idx": idx,
+    return {"idx": idx,
         "mode": mode,
         "threshold": threshold,
         "predictable_mask": predictable_mask,
@@ -214,4 +205,3 @@ def plot_prediction_example(pred, true, cfg, *, idx=0, score=None, gate=None, pr
         "rmse_x_partial": partial_rmse,
         "rmse_x_oracle": oracle_rmse,
         "eps_by_step": eps_by_step}
-
