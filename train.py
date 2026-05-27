@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -21,8 +19,6 @@ def _resolve_selective_loss_fn(cfg, loss_fn=None):
 
     if cfg.data.task == "full_phase":
         return combined_selective_loss
-
-    raise ValueError(f"Unknown cfg.data.task={cfg.data.task!r}")
 
 
 def _save_checkpoint(path, *, epoch, model, opt=None, sched=None, best_score=None, score=None, val_metrics=None, cfg=None):
@@ -180,8 +176,7 @@ def train_model_selective(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn
                 f"gate_fr={dbg['mean_gate_fr']:.3f}")
 
             epoch_weights_path = f"{cfg.save_dir}/{cfg.save_stem}_{epoch}.pt"
-            val_metrics = {
-                "short_rmse": val_rmse,
+            val_metrics = {"short_rmse": val_rmse,
                 "amp_loss": val_amp_loss,
                 "amp_ratio_x": val_amp_ratio_x,
                 "valid_time_x": val_vt,
@@ -189,13 +184,10 @@ def train_model_selective(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn
 
             _save_checkpoint(
                 epoch_weights_path,
-                epoch=epoch,
-                model=model,
-                opt=opt,
-                sched=sched,
+                epoch=epoch,model=model,
+                opt=opt,sched=sched,
                 best_score=best_score,
-                score=score,
-                val_metrics=val_metrics,
+                score=score,val_metrics=val_metrics,
                 cfg=cfg)
 
             if score < best_score:
@@ -219,12 +211,10 @@ def train_model_selective(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn
         model.load_state_dict(best_state)
 
         torch.save(
-            {
-                "model_state_dict": model.state_dict(),
+            {"model_state_dict": model.state_dict(),
                 "best_score": best_score,
                 "cfg": cfg,
-                "history": history
-            },
+                "history": history},
             cfg.best_weights_path)
 
         print("final best weights saved to:", cfg.best_weights_path)
@@ -266,13 +256,10 @@ def train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn=
             noise_std=noise_std)
 
         loss, debug = loss_fn(
-            pred=pred,
-            true=target,
-            pi=pi,mu=mu,
-            sigma=sigma,
+            pred=pred, true=target,
+            pi=pi, mu=mu, sigma=sigma,
             short_k=eff_short_k,
-            epoch=epoch,
-            n_epochs=n_epochs,
+            epoch=epoch, n_epochs=n_epochs,
             loss_cfg=cfg.loss)
 
         opt.zero_grad(set_to_none=True)
@@ -287,8 +274,7 @@ def train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn=
             val_metrics = evaluate_model_mdnstats(model, X_val, Y_val, cfg, n_eval=n_eval)
             score = val_metrics["short_rmse"] + score_amp_weight * val_metrics["amp"] - score_vt_weight * val_metrics["valid_time_x"]
 
-            row = {
-                "epoch": epoch,
+            row = {"epoch": epoch,
                 "tf_ratio": tf_ratio,
                 "horizon": curr_horizon,
                 "noise_std": noise_std,
@@ -298,8 +284,7 @@ def train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn=
                 "score": score}
             history.append(row)
 
-            print(
-                f"\nEpoch {epoch:04d} | "
+            print(f"\nEpoch {epoch:04d} | "
                 f"H={curr_horizon:3d} | tf={tf_ratio:.3f} | "
                 f"loss={debug['loss']:.4f} | "
                 f"mse={debug['mse_short']:.4f} | "
@@ -314,12 +299,10 @@ def train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn=
 
             _save_checkpoint(
                 epoch_weights_path,
-                epoch=epoch,
-                model=model,
-                opt=opt,sched=sched,
+                epoch=epoch, model=model,
+                opt=opt, sched=sched,
                 best_score=best_score,
-                score=score,
-                val_metrics=val_metrics,
+                score=score, val_metrics=val_metrics,
                 cfg=cfg)
 
             if score < best_score:
@@ -329,12 +312,9 @@ def train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn=
                 _save_checkpoint(
                     cfg.best_weights_path,
                     epoch=epoch,
-                    model=model,
-                    opt=opt,
-                    sched=sched,
-                    best_score=best_score,
-                    score=score,
-                    val_metrics=val_metrics,
+                    model=model, opt=opt,
+                    sched=sched, best_score=best_score,
+                    score=score, val_metrics=val_metrics,
                     cfg=cfg)
 
                 print(f"  saved best -> {cfg.best_weights_path} | score={best_score:.4f}")
@@ -345,14 +325,12 @@ def train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn=
                 vt_path = cfg.best_weights_path.replace(".pt", "_best_vtx.pt")
 
                 torch.save(
-                    {
-                        "epoch": epoch,
+                    {"epoch": epoch,
                         "model_state_dict": best_vt_state,
                         "best_vt_x": best_vt_x,
                         "val_metrics": val_metrics,
                         "cfg": cfg,
-                        "history": history
-                    },
+                        "history": history},
                     vt_path)
 
                 print(f"  saved best vt_x -> {vt_path} | vt_x={best_vt_x:.4f}")
@@ -361,12 +339,10 @@ def train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, *, loss_fn=
         model.load_state_dict(best_state)
 
         torch.save(
-            {
-                "model_state_dict": model.state_dict(),
+            {"model_state_dict": model.state_dict(),
                 "best_score": best_score,
                 "cfg": cfg,
-                "history": history
-            },
+                "history": history},
             cfg.best_weights_path)
 
         print("final best weights saved to:", cfg.best_weights_path)
@@ -383,4 +359,3 @@ def train_model(model, X_train, Y_train, X_val, Y_val, cfg, **kwargs):
     if detector_mode == "posthoc":
         return train_model_mdnstats(model, X_train, Y_train, X_val, Y_val, cfg, **kwargs)
 
-    raise ValueError(f"Unknown cfg.detector.mode={detector_mode!r}")
