@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Mapping
 from typing import Any, Iterable
 
@@ -43,29 +41,10 @@ def _squeeze_gate_np(gate):
     return gate
 
 
-def _last_dim(a) -> int:
-    a = _to_numpy(a)
-
-    if a.ndim == 2:
-        return 1
-
-    if a.ndim == 3:
-        return a.shape[-1]
-
-    raise ValueError(f"Unsupported shape: {a.shape}")
-
-
 def rmse_by_step(pred, true):
     pred = _to_numpy(pred)
     true = _to_numpy(true)
     return np.sqrt(((pred - true) ** 2).mean(axis=(0, 2)))
-
-
-def rmse_by_step_per_coord(pred, true):
-    pred = _to_numpy(pred)
-    true = _to_numpy(true)
-    return np.sqrt(((pred - true) ** 2).mean(axis=0))
-
 
 def rmse_by_step_x(pred, true):
     pred_x = _get_x_np(pred)
@@ -80,10 +59,6 @@ def rmse_by_step_x_partial(pred, true, mask):
     err2 = (pred_x - true_x) ** 2
     denom = np.maximum(mask.sum(axis=0), 1)
     return np.sqrt((err2 * mask).sum(axis=0) / denom)
-
-
-# rmse_by_step_x_any = rmse_by_step_x
-# rmse_by_step_x_partial_any = rmse_by_step_x_partial
 
 
 def coord_rmse(pred, true):
@@ -204,7 +179,7 @@ def _compute_full_phase_metrics(pred, true, short_k: int, dt: float) -> dict[str
 
     coord_err = coord_rmse(pred, true)
     rmse_step = rmse_by_step(pred, true)
-    rmse_step_coord = rmse_by_step_per_coord(pred, true)
+    rmse_step_coord = rmse_by_step_x(pred, true)
 
     if pred_long.shape[1] > 0:
         long_rmse = np.sqrt(((pred_long - true_long) ** 2).mean())
@@ -303,14 +278,9 @@ def print_metrics(pred, true, cfg, *, gate=None, gate_threshold=None, eps_short=
     metrics.update(full_phase_metrics)
 
     if gate is not None:
-        selective_metrics = _compute_selective_metrics(
-            pred_np,
-            true_np,
-            gate,
-            gate_threshold=gate_threshold,
-            eps_short=eps_short,
-            eps_long=eps_long
-        )
+        selective_metrics = _compute_selective_metrics(pred_np,true_np,
+            gate,gate_threshold=gate_threshold,
+            eps_short=eps_short,eps_long=eps_long)
         metrics.update(selective_metrics)
 
     if print_output:
@@ -401,8 +371,8 @@ def print_posthoc_detector_metrics(proba_unpred, pred, true, cfg, *, threshold=0
     fp = ((mask_unpred == 1) & (y == 0)).sum()
     fn = ((mask_unpred == 0) & (y == 1)).sum()
 
-    precision = tp / max(tp + fp, 1)
-    recall = tp / max(tp + fn, 1)
+    precision = tp/max(tp + fp, 1)
+    recall = tp/max(tp + fn, 1)
     coverage_predictable = 1.0 - mask_unpred.mean()
 
     print("POST-HOC UNPREDICTABLE DETECTOR")
