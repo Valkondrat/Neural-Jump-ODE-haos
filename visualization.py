@@ -215,29 +215,3 @@ def plot_prediction_example(pred, true, cfg, *, idx=0, score=None, gate=None, pr
         "rmse_x_oracle": oracle_rmse,
         "eps_by_step": eps_by_step}
 
-
-def interactive_prediction_plot(pred, true, cfg, **kwargs):
-    try:
-        import ipywidgets as widgets
-        from IPython.display import display
-    except ImportError as exc:
-        raise ImportError(
-            "ipywidgets and IPython are required for interactive_prediction_plot. "
-            "Install ipywidgets or use plot_prediction_example(..., idx=...).") from exc
-
-    pred_np = _to_numpy(pred)
-    max_idx = pred_np.shape[0] - 1
-
-    slider = widgets.IntSlider(
-        value=0,min=0,
-        max=max_idx,
-        step=1,description="idx",
-        continuous_update=False,
-        layout=widgets.Layout(width="600px"))
-
-    out = widgets.interactive_output(
-        lambda idx: plot_prediction_example(pred, true, cfg, idx=idx, **kwargs),
-        {"idx": slider})
-
-    display(slider, out)
-    return slider, out
