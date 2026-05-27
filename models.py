@@ -74,7 +74,7 @@ class SelectiveHead(nn.Module):
         mu = self.mu(h).view(B, self.K, self.D)
         sigma = torch.exp(self.log_sigma(h).view(B, self.K, self.D)).clamp(1e-3, 2.0)
         unc = mdn_uncertainty_features_torch(pi, mu, sigma)
-        t_norm = torch.full((B, 1), step / self.max_horizon, device=h.device)
+        t_norm = torch.full((B, 1), step/self.max_horizon, device=h.device)
         t_emb = self.step_embed(t_norm)
 
         if self.detach_gate_backbone:
@@ -199,14 +199,12 @@ class PureSelectiveGRUDecoder1D(nn.Module):
             steps_on_wing = (steps_on_wing + 1.0 / self.wing_scale) * (1.0 - switched)
             last_sign = new_sign
 
-        return (
-            torch.cat(preds, dim=1),
+        return (torch.cat(preds, dim=1),
             torch.cat(gates, dim=1),
             torch.cat(err_hats, dim=1),
             torch.cat(all_pi, dim=1),
             torch.cat(all_mu, dim=1),
-            torch.cat(all_sigma, dim=1)
-        )
+            torch.cat(all_sigma, dim=1))
 
 
 class HybridNJODEEncoderGRUModel1D(nn.Module):
@@ -245,17 +243,13 @@ class HybridNJODEEncoderGRUModel1D(nn.Module):
             self.z2h = nn.Sequential(nn.Linear(z_dim, hidden_dim), nn.Tanh())
 
         self.decoder = PureSelectiveGRUDecoder1D(
-            hidden_dim=hidden_dim,
-            n_mdn_components=n_mdn_components,
-            phys_dim=phys_dim,
-            delay_dim=input_dim,
-            delay_tau=delay_tau,
-            max_horizon=max_horizon,
-            wing_scale=wing_scale
-        )
+            hidden_dim=hidden_dim, n_mdn_components=n_mdn_components,
+            phys_dim=phys_dim,delay_dim=input_dim,
+            delay_tau=delay_tau,max_horizon=max_horizon,
+            wing_scale=wing_scale)
 
     def latent_rollout_step(self, z):
-        dt_sub = self.dt / self.seg_ode
+        dt_sub = self.dt/self.seg_ode
 
         for _ in range(self.seg_ode):
             z = rk4_step_torch(self.ode_func, z, dt_sub)
@@ -304,7 +298,7 @@ class PureSelectiveGRUDecoder(nn.Module):
             same = (signs[:, t:t + 1] == last_sign).float()
             wing_time = wing_time * same + same
 
-        wing_time = wing_time / self.wing_scale
+        wing_time = wing_time/self.wing_scale
         return last_sign, wing_time
 
     def decode(self, h0, x_seq, horizon, x_true=None, tf_ratio=0.0, noise_std=0.0, sample_mode=False):
@@ -393,7 +387,7 @@ class HybridNJODEEncoderGRUModel(nn.Module):
         self.decoder = PureSelectiveGRUDecoder(hidden_dim=hidden_dim, n_mdn_components=n_mdn_components, phys_dim=phys_dim, max_horizon=max_horizon, wing_scale=wing_scale)
 
     def latent_rollout_step(self, z):
-        dt_sub = self.dt / self.seg_ode
+        dt_sub = self.dt/self.seg_ode
 
         for _ in range(self.seg_ode):
             z = rk4_step_torch(self.ode_func, z, dt_sub)
@@ -473,7 +467,7 @@ class GRUDecoderNoLatentODE1D(nn.Module):
             same = (signs[:, t:t + 1] == last_sign).float()
             wing_time = wing_time * same + same
 
-        wing_time = wing_time / self.wing_scale
+        wing_time = wing_time/self.wing_scale
         return last_sign, wing_time
 
     def _build_delay_from_buffer(self, scalar_buffer):
@@ -492,13 +486,6 @@ class GRUDecoderNoLatentODE1D(nn.Module):
         last_sign, wing_time = self._init_wing_state(x_seq)
         scalar_buffer = [x_seq[:, t, 0:1].detach() for t in range(x_seq.size(1))]
         required = (self.delay_dim - 1) * self.delay_tau + 1
-
-        if len(scalar_buffer) < required:
-            raise ValueError(
-                f"WINDOW={len(scalar_buffer)} too small for "
-                f"delay_dim={self.delay_dim}, delay_tau={self.delay_tau}. "
-                f"Need at least {required}."
-            )
 
         preds = []
         all_pi, all_mu, all_sigma = [], [], []
@@ -530,12 +517,10 @@ class GRUDecoderNoLatentODE1D(nn.Module):
             wing_time = (wing_time + 1.0 / self.wing_scale) * (1.0 - switched)
             last_sign = new_sign
 
-        return (
-            torch.cat(preds, dim=1),
+        return (torch.cat(preds, dim=1),
             torch.cat(all_pi, dim=1),
             torch.cat(all_mu, dim=1),
-            torch.cat(all_sigma, dim=1)
-        )
+            torch.cat(all_sigma, dim=1))
 
 
 class GRUDecoderNoLatentODE(nn.Module):
@@ -557,7 +542,7 @@ class GRUDecoderNoLatentODE(nn.Module):
             same = (signs[:, t:t + 1] == last_sign).float()
             wing_time = wing_time * same + same
 
-        wing_time = wing_time / self.wing_scale
+        wing_time = wing_time/self.wing_scale
         return last_sign, wing_time
 
     def decode(self, z0, h0, x_seq, horizon, x_true=None, tf_ratio=0.0, noise_std=0.0, sample_mode=False):
@@ -595,12 +580,10 @@ class GRUDecoderNoLatentODE(nn.Module):
             wing_time = (wing_time + 1.0 / self.wing_scale) * (1.0 - switched)
             last_sign = new_sign
 
-        return (
-            torch.cat(preds, dim=1),
+        return (torch.cat(preds, dim=1),
             torch.cat(all_pi, dim=1),
             torch.cat(all_mu, dim=1),
-            torch.cat(all_sigma, dim=1)
-        )
+            torch.cat(all_sigma, dim=1))
 
 
 class HybridNJODEEncoderGRUMDNStatsModel1D(nn.Module):
@@ -640,7 +623,7 @@ class HybridNJODEEncoderGRUMDNStatsModel1D(nn.Module):
         self.decoder = GRUDecoderNoLatentODE1D(z_dim=z_dim, hidden_dim=hidden_dim, delay_dim=input_dim, delay_tau=delay_tau, n_mdn_components=n_mdn_components, wing_scale=wing_scale)
 
     def latent_rollout_step(self, z):
-        dt_sub = self.dt / self.seg_ode
+        dt_sub = self.dt/self.seg_ode
 
         for _ in range(self.seg_ode):
             z = rk4_step_torch(self.ode_func, z, dt_sub)
@@ -704,7 +687,7 @@ class HybridNJODEEncoderGRUMDNStatsModel(nn.Module):
         self.decoder = GRUDecoderNoLatentODE(z_dim=z_dim, hidden_dim=hidden_dim, n_mdn_components=n_mdn_components, wing_scale=wing_scale)
 
     def latent_rollout_step(self, z):
-        dt_sub = self.dt / self.seg_ode
+        dt_sub = self.dt/self.seg_ode
 
         for _ in range(self.seg_ode):
             z = rk4_step_torch(self.ode_func, z, dt_sub)
@@ -741,8 +724,6 @@ def build_selective_model_from_cfg(cfg):
     if cfg.data.task == "full_phase":
         return HybridNJODEEncoderGRUModel(cfg=cfg)
 
-    raise ValueError(f"Unknown cfg.data.task={cfg.data.task!r}")
-
 
 def build_mdn_stats_model_from_cfg(cfg):
     if cfg.data.task == "x_delay":
@@ -750,8 +731,6 @@ def build_mdn_stats_model_from_cfg(cfg):
 
     if cfg.data.task == "full_phase":
         return HybridNJODEEncoderGRUMDNStatsModel(cfg=cfg)
-
-    raise ValueError(f"Unknown cfg.data.task={cfg.data.task!r}")
 
 
 def build_model_from_cfg(cfg):
@@ -762,5 +741,3 @@ def build_model_from_cfg(cfg):
 
     if detector_mode == "posthoc":
         return build_mdn_stats_model_from_cfg(cfg)
-
-    raise ValueError(f"Unknown cfg.detector.mode={detector_mode!r}")
