@@ -36,8 +36,8 @@ def wing_phase_features_x_torch(x_seq):
         still_same = (signs[:, t] == last_sign[:, 0]).float()
         steps = steps * still_same + still_same
 
-    steps_on_wing = (steps / 20.0).unsqueeze(1)
-    proximity = torch.exp(-x[:, -1:].abs() / 0.5)
+    steps_on_wing = (steps/20.0).unsqueeze(1)
+    proximity = torch.exp(-x[:, -1:].abs()/0.5)
     dx = (x[:, -1:] - x[:, -2:-1]).abs()
 
     if x.size(1) >= 3:
