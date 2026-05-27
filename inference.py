@@ -74,11 +74,9 @@ def forced_rollout_numpy(model, X, cfg, Y=None, n_samples=300, horizon=None):
     true_np = None if Y is None else Y[:n_samples].cpu().numpy()
 
     pred, pi, mu, sigma = model(
-        xb,
-        horizon=horizon,
+        xb,horizon=horizon,
         tf_ratio=0.0,
-        noise_std=0.0
-    )
+        noise_std=0.0)
 
     unc = mdn_uncertainty_features_sequence(pi, mu, sigma)
 
@@ -105,15 +103,6 @@ def corrected_rollout_numpy(model, X, cfg, *, Y=None, n_samples=None, horizon=No
 
     threshold = _normalize_threshold(threshold)
 
-    if replacement not in {"mdn_map", "last_accepted", "hold"}:
-        raise ValueError("replacement must be one of: 'mdn_map', 'last_accepted', 'hold'")
-
-    if mode not in {"selective", "posthoc"}:
-        raise ValueError("mode must be 'selective' or 'posthoc'")
-
-    if mode == "posthoc" and posthoc_clf is None:
-        raise ValueError("posthoc_clf must be provided for recursive corrected rollout with mode='posthoc'.")
-
     if n_samples is None:
         n_samples = len(X)
 
@@ -130,9 +119,6 @@ def corrected_rollout_numpy(model, X, cfg, *, Y=None, n_samples=None, horizon=No
     task = cfg.data.task
     is_x_delay = task == "x_delay"
     is_full_phase = task == "full_phase"
-
-    if not (is_x_delay or is_full_phase):
-        raise ValueError(f"Unknown cfg.data.task={task!r}")
 
     decoder = model.decoder
 
@@ -152,11 +138,6 @@ def corrected_rollout_numpy(model, X, cfg, *, Y=None, n_samples=None, horizon=No
     if is_x_delay:
         scalar_buffer = [xb[:, t, 0:1].detach() for t in range(xb.size(1))]
         required = (decoder.delay_dim - 1) * decoder.delay_tau + 1
-
-        if len(scalar_buffer) < required:
-            raise ValueError(f"WINDOW={len(scalar_buffer)} too small for "
-                f"delay_dim={decoder.delay_dim}, delay_tau={decoder.delay_tau}. "
-                f"Need at least {required}.")
 
         x_prev = scalar_buffer[-1]
         x_prev_prev = scalar_buffer[-2]
