@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Dict
 
 import numpy as np
@@ -22,6 +20,11 @@ def oracle_good_x(pred, true, eps_x):
     return err_x < eps_x, err_x
 
 
+def adaptive_eps_x_np(horizon, eps_short=0.6, eps_long=1.2):
+    steps = np.arange(horizon)
+    frac = steps / max(horizon - 1, 1)
+    return eps_short + frac * (eps_long - eps_short)
+
 def _adaptive_oracle_good_x_np(pred, true, *, eps_short=0.6, eps_long=1.2):
     pred_x = _get_x_np(pred)
     true_x = _get_x_np(true)
@@ -30,12 +33,6 @@ def _adaptive_oracle_good_x_np(pred, true, *, eps_short=0.6, eps_long=1.2):
     err_x = np.abs(pred_x - true_x)
     oracle_mask = err_x <= eps_by_step[None, :]
     return oracle_mask, err_x, eps_by_step
-
-
-def adaptive_eps_x_np(horizon, eps_short=0.6, eps_long=1.2):
-    steps = np.arange(horizon)
-    frac = steps / max(horizon - 1, 1)
-    return eps_short + frac * (eps_long - eps_short)
 
 
 def oracle_good_x_adaptive_any(pred, true, eps_short=0.6, eps_long=1.2):
@@ -57,6 +54,7 @@ def apply_platt_to_gate(gate_np, platt_model):
 
 def calibrate_gate_platt_adaptive_constrained(model, X_val, Y_val, cfg, n_samples=2048,
                                                eps_short=None, eps_long=None, target_precision=None, min_recall=None, min_coverage=None):
+
     if eps_short is None:
         eps_short = cfg.detector.eps_short
     if eps_long is None:
