@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -37,8 +35,7 @@ def evaluate_model_selective(model, X, Y, cfg, *, n_eval=256, gate_threshold_log
         horizon=cfg.data.full_horizon,
         tf_ratio=0.0,
         noise_std=0.0,
-        sample_mode=False
-    )
+        sample_mode=False)
 
     short_rmse = F.mse_loss(pred[:, :cfg.data.short_k], yb[:, :cfg.data.short_k]).sqrt().item()
     amp_loss = amplitude_loss(pred[:, cfg.data.short_k:], yb[:, cfg.data.short_k:]).item()
@@ -49,13 +46,10 @@ def evaluate_model_selective(model, X, Y, cfg, *, n_eval=256, gate_threshold_log
 
     if task == "x_delay":
         amp_ratio_x = (
-            pred[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean()
-            / (yb[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean() + 1e-8)).item()
+            pred[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean()/(yb[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean() + 1e-8)).item()
     elif task == "full_phase":
         amp_rat = amplitude_ratio(pred_np[:, cfg.data.short_k:, :], true_np[:, cfg.data.short_k:, :])
         amp_ratio_x = float(amp_rat[0])
-    else:
-        raise ValueError(f"Unknown cfg.data.task={task!r}")
 
     vt = valid_time_x(pred_np, true_np, threshold=0.4, dt=cfg.attractor.dt)
 
@@ -83,8 +77,8 @@ def evaluate_model_selective(model, X, Y, cfg, *, n_eval=256, gate_threshold_log
     fp = np.logical_and(gate_mask, ~oracle_mask).sum()
     fn = np.logical_and(~gate_mask, oracle_mask).sum()
 
-    gate_precision = tp / max(tp + fp, 1)
-    gate_recall = tp / max(tp + fn, 1)
+    gate_precision = tp/max(tp + fp, 1)
+    gate_recall = tp/max(tp + fn, 1)
     gate_coverage = gate_mask.mean()
 
     gate_good_mean = gate_np[oracle_mask].mean() if oracle_mask.any() else np.nan
@@ -144,13 +138,11 @@ def evaluate_model_mdnstats(model, X, Y, cfg, *, n_eval=256):
 
     if task == "x_delay":
         amp_ratio_x = (
-            pred[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean()
-            / (yb[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean() + 1e-8)).item()
+            pred[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean()/(yb[:, cfg.data.short_k:, 0].std(dim=1, correction=0).mean() + 1e-8)).item()
     elif task == "full_phase":
         amp_rat = amplitude_ratio(pred_np[:, cfg.data.short_k:, :], true_np[:, cfg.data.short_k:, :])
         amp_ratio_x = float(amp_rat[0])
-    else:
-        raise ValueError(f"Unknown cfg.data.task={task!r}")
+
 
     print(f"mean_sigma={mean_sigma:.4f} "
         f"short_rmse={short_rmse:.4f} "
@@ -179,4 +171,4 @@ def evaluate_model(model, X, Y, cfg, *, n_eval=256, gate_threshold_log=None, use
     if detector_mode == "posthoc":
         return evaluate_model_mdnstats(model, X, Y, cfg, n_eval=n_eval)
 
-    raise ValueError(f"Unknown cfg.detector.mode={detector_mode!r}")
+
